@@ -1,0 +1,38 @@
+numpy>=1.23.0
+pandas>=1.5.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+scikit-learn>=1.2.0
+torch>=2.0.0
+torchvision>=0.15.0
+transformers>=4.30.0
+sentence-transformers>=2.2.0
+streamlit>=1.25.0
+plotly>=5.15.0
+python-docx>=0.8.11
+openpyxl>=3.1.0
+pymupdf>=1.21.0
+joblib>=1.2.0
+SQLAlchemy>=2.0.20
+mysqlclient>=2.2.0        # Option A (fast, requires libmysqlclient)
+# or
+PyMySQL>=1.1.0            # Option B (pure Python)
+openai
+
+#config.py
+#logging_utils.py
+#utils
+#-->eda.py
+#data_cleaning.py
+#sql_ops.py
+#ml_attrition.py
+#ml_performance_regression.py
+#nlp_resume_parsing.py
+#transformers_skill_matching.py
+#llm_chatbot.py
+#dl_cnn_fraud.py
+#time_series_forecasting.py
+#sentiment_analysis.py
+#interview_summarization.py
+#dashboard_app.py
+#main.py
