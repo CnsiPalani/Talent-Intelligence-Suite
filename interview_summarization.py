@@ -56,11 +56,19 @@ def summarize_transcript(transcript_text: str) -> str:
     return transcript_text[:200] + ("..." if len(transcript_text) > 200 else "")
 
 # Summarize transcripts loaded from URIs, with optional interview_id filter
-def summarize_all_interview_transcripts_from_uri(interview_type: str = None):
+def summarize_all_interview_transcripts_from_uri(interview_type: str = None, interview_ids: List[int] = None):
     """
     Summarize transcripts for the given interview_ids. If interview_ids is None, summarize all.
+    Optionally filter by interview_type.
     """
     df = load_interview_uris_from_db(interview_type)
+    if interview_ids is not None:
+        if not isinstance(interview_ids, list):
+            interview_ids = [interview_ids]
+        # Ensure both are int for correct filtering
+        df["interview_id"] = df["interview_id"].astype(int)
+        interview_ids = [int(i) for i in interview_ids]
+        df = df[df["interview_id"].isin(interview_ids)]
     if df.empty:
         return "No transcripts found for the selected interviews."
     df["transcript_text"] = df["transcript_uri"].apply(load_transcript_from_uri)

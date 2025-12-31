@@ -1,49 +1,70 @@
 import streamlit as st
-import os
 from dotenv import load_dotenv
 load_dotenv()
 from streamlit_option_menu import option_menu
-from pathlib import Path
 import pandas as pd
+from typing import Tuple
 from src.logging_utils import get_logger
-from src.configuration import PATHS
-from src.ml_attrition import train_attrition_model, train_attrition_model_from_db, AttritionConfig
-from src.ml_performance_regression import train_performance_model, train_performance_model_from_db, PerfConfig
-from src.sentiment_analysis import train_sentiment, train_sentiment_from_db
-from src.eda import eda_overview, eda_overview_db
-from src.transformers_skill_matching import match_resume_to_jd, match_all_resumes_to_jds
+from src.ml_attrition import train_attrition_model_from_db, AttritionConfig
+from src.ml_performance_regression import train_performance_model_from_db, PerfConfig
+from src.sentiment_analysis import train_sentiment_from_db
+from src.eda import eda_overview_db
+from src.transformers_skill_matching import match_all_resumes_to_jds
 from src.interview_summarization import summarize_all_interview_transcripts_from_uri
 from src.time_series_forecasting import load_workload_series
 from src.dl_cnn_fraud import train_cnn, TrainConfig
-from src.llm_chatbot import gpt_summarize, gpt_chatbot_db
+from src.llm_chatbot import gpt_chatbot_db
 import matplotlib.pyplot as plt
 import seaborn as sns
 from src.db_utils import read_sql_df
-from src.sentiment_analysis import train_sentiment_from_db, SENTIMENT_SQL
+from src.sentiment_analysis import train_sentiment_from_db
+
 
 
 # --- Set Page Config and Add Banner Image ---
-st.set_page_config(page_title="AI-Powered Talent Intelligence & Workforce Optimization Suite (T-IQ)", layout="wide")
+st.set_page_config(page_title="AI-Powered Talent Intelligence & Workforce Optimization Suite (T-IQ)", layout="wide", page_icon="🧠")
 
 
+def split_features_target(df: pd.DataFrame, target_col: str) -> Tuple[pd.DataFrame, pd.Series]:
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+    logger.info(f"Split data into X({X.shape}) and y({y.shape})")
+    return X, y
 # --- Custom Header and Theme ---
+
+# --- Modern UI CSS and Colorful Logo ---
 st.markdown(
     """
     <style>
     .main-title {
         font-size:2.5rem;
         font-weight:700;
-        color:#1a237e;
-        background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%);
+        color:#fff;
+        background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
         padding: 1.2rem 0.5rem 1.2rem 0.5rem;
-        border-radius: 0.5rem;
+        border-radius: 0.7rem;
         text-align:center;
         margin-bottom: 1.5rem;
-        box-shadow: 0 2px 8px rgba(26,35,126,0.08);
+        box-shadow: 0 4px 16px rgba(67,206,162,0.10);
         letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.2rem;
+    }
+    .main-logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px #43cea288;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.7rem;
     }
     .stApp {
-        background-color: #f5f7fa;
+        background: linear-gradient(120deg, #f5f7fa 0%, #e3f0ff 100%);
     }
     .section-header {
         font-size:1.5rem;
@@ -73,9 +94,26 @@ st.markdown(
     .icon-time { color:#1976d2 !important; }
     .icon-fraud { color:#d32f2f !important; }
     .icon-chatbot { color:#388e3c !important; }
+    /* Sidebar modern look */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(120deg, #43cea2 0%, #185a9d 100%);
+        color: #fff;
+        border-radius: 0 1.2rem 1.2rem 0;
+        box-shadow: 2px 0 12px #185a9d22;
+    }
+    /* Widget hover effect */
+    .stButton>button, .stSelectbox>div, .stTextInput>div>input {
+        border-radius: 0.5rem !important;
+        transition: box-shadow 0.2s;
+    }
+    .stButton>button:hover, .stSelectbox>div:hover, .stTextInput>div>input:focus {
+        box-shadow: 0 0 0 2px #43cea2;
+    }
     </style>
-    <div class="main-title" style="display:flex;align-items:center;justify-content:center;gap:1rem;">
-        <i class="bi bi-people-fill" style="font-size:2.2rem;color:#1976d2;margin-right:0.7rem;"></i>
+    <div class="main-title">
+        <span class="main-logo">
+            <img src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/1f9e0.svg" width="44" height="44" alt="AI Logo" />
+        </span>
         Talent Intelligence Suite (T-IQ)
     </div>
     """,
@@ -111,8 +149,7 @@ if option == "EDA":
     st.markdown('<div class="section-header"><i class="bi bi-bar-chart-fill section-icon icon-eda"></i>Exploratory Data Analysis</div>', unsafe_allow_html=True)
     df = eda_overview_db()
     logger.info(f"Loaded {len(df)} rows from DB for EDA")
-    #st.dataframe(df)
-    #st.success("EDA report generated")
+    
 
     num_cols = df.select_dtypes(include=['number']).columns.tolist()
     cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
@@ -192,10 +229,9 @@ elif option == "Attrition Prediction":
     df = read_sql_df(ATTRITION_SQL)
     df["Attrition"] = df["Attrition"].astype(int)
     # Train model
-    model = train_attrition_model_from_db(cfg)
+    model = train_attrition_model_from_db(cfg,ATTRITION_SQL)
     
     # Predict probabilities for plotting
-    from src.data_cleaning import split_features_target
     X, _ = split_features_target(df, cfg.target_col)
     if hasattr(model, 'predict_proba'):
         proba = model.predict_proba(X)[:, 1]
@@ -332,7 +368,7 @@ elif option == "Interview Summarization":
                 # Filter to selected interviews and get their types (or pass IDs if function supports)
                 selected_df = display_df[display_df["interview_id"].astype(str).isin(selected_ids)]
                 selected_types = selected_df["interview_type"].unique().tolist()
-                summary = summarize_all_interview_transcripts_from_uri(selected_types)
+                summary = summarize_all_interview_transcripts_from_uri(selected_types,selected_ids)
                 with st.expander("Interview Summary", expanded=True):
                     st.markdown(summary if summary else "No summary available.")
             else:
@@ -356,7 +392,7 @@ elif option == "CNN Fraud Detection":
 
 elif option == "LLM Chatbot":
     st.markdown('<div class="section-header"><i class="bi bi-robot section-icon icon-chatbot"></i>LLM Chatbot</div>', unsafe_allow_html=True)
-    query = st.text_area("Enter your query:", "What is the leave policy?")
+    query = st.text_area("Enter your query:", )
     if st.button("Ask Chatbot"):
         session_id = 1  # For demo purposes, use a fixed session_id
         response = gpt_chatbot_db(session_id, query)
